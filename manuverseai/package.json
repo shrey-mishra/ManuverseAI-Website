@@ -57,8 +57,10 @@
     "three": "^0.162.0"
   },
   "scripts": {
+    "dev": "vite",
     "start": "vite",
-    "build": "vite build --sourcemap",
+    "build": "vite build",
+    "preview": "vite preview",
     "serve": "vite preview"
   },
   "eslintConfig": {

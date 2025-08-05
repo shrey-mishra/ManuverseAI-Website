@@ -6,6 +6,8 @@ const Globe3D = ({ className = "w-96 h-96" }) => {
   const sceneRef = useRef(null);
   const rendererRef = useRef(null);
   const animationIdRef = useRef(null);
+  const mouseRef = useRef({ x: 0, y: 0 });
+  const isHoveringRef = useRef(false);
 
   // Create scene, camera, and renderer
   const { scene, camera, renderer } = useMemo(() => {
@@ -126,15 +128,45 @@ const Globe3D = ({ className = "w-96 h-96" }) => {
     return globeGroup;
   };
 
+  // Mouse interaction handlers
+  const handleMouseMove = (event) => {
+    if (!mountRef.current) return;
+    
+    const rect = mountRef.current.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    
+    mouseRef.current.x = ((event.clientX - rect.left) - centerX) / centerX;
+    mouseRef.current.y = ((event.clientY - rect.top) - centerY) / centerY;
+  };
+
+  const handleMouseEnter = () => {
+    isHoveringRef.current = true;
+  };
+
+  const handleMouseLeave = () => {
+    isHoveringRef.current = false;
+  };
+
   // Animation loop
   const animate = () => {
     animationIdRef.current = requestAnimationFrame(animate);
     
     const globe = scene.getObjectByName('globe');
     if (globe) {
-      // Rotate globe on X and Y axes
+      // Base rotation
       globe.rotation.x += 0.002;
       globe.rotation.y += 0.003;
+      
+      // Mouse interaction rotation
+      if (isHoveringRef.current) {
+        const targetRotationX = mouseRef.current.y * 0.5;
+        const targetRotationY = mouseRef.current.x * 0.5;
+        
+        // Smooth interpolation for mouse movement
+        globe.rotation.x += (targetRotationX - globe.rotation.x) * 0.05;
+        globe.rotation.y += (targetRotationY - globe.rotation.y) * 0.05;
+      }
       
       // Animate connection lines
       globe.children.forEach((child, index) => {
@@ -182,6 +214,22 @@ const Globe3D = ({ className = "w-96 h-96" }) => {
     };
   }, [scene, camera, renderer]);
 
+  // Add mouse event listeners
+  useEffect(() => {
+    const element = mountRef.current;
+    if (!element) return;
+
+    element.addEventListener('mousemove', handleMouseMove);
+    element.addEventListener('mouseenter', handleMouseEnter);
+    element.addEventListener('mouseleave', handleMouseLeave);
+
+    return () => {
+      element.removeEventListener('mousemove', handleMouseMove);
+      element.removeEventListener('mouseenter', handleMouseEnter);
+      element.removeEventListener('mouseleave', handleMouseLeave);
+    };
+  }, []);
+
   // Handle window resize
   useEffect(() => {
     const handleResize = () => {
@@ -200,7 +248,7 @@ const Globe3D = ({ className = "w-96 h-96" }) => {
   return (
     <div 
       ref={mountRef} 
-      className={`relative ${className}`}
+      className={`relative ${className} cursor-pointer`}
       style={{ 
         background: 'radial-gradient(circle, rgba(0, 217, 255, 0.05) 0%, transparent 70%)',
         borderRadius: '50%'
